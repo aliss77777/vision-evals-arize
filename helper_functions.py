@@ -8,42 +8,7 @@ anthropic_api_key = os.environ.get("ANTHROPIC_API_KEY")
 anthropic_client = Anthropic(api_key=anthropic_api_key)
 MODEL_NAME = "claude-3-haiku-20240307" #"claude-3-opus-20240229"
 
-# function to process the image and get the content
-def process_image(image_path):
-    with Image.open(image_path) as img:
-        # Convert to RGB mode (removes alpha channel if present)
-        img = img.convert('RGB')
-        
-        # Save as JPEG in memory
-        buffer = io.BytesIO()
-        img.save(buffer, format='JPEG')
-        img_content = buffer.getvalue()
-    
-    return img_content
-
-
-# Anthropic Functions
-def get_vision_completion(base64_string, prompt_text, MODEL_NAME):
-    '''
-    This function takes a base64 encoded image and a prompt text, and returns the completion from the Claude model.
-    '''
-    response = anthropic_client.messages.create(
-        model=MODEL_NAME,
-        max_tokens=2048,
-        temperature=0,
-        messages=[
-                {
-                    "role": 'user',
-                    "content": [
-                        {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64_string}},
-                        {"type": "text", "text": prompt_text}
-                    ]
-                }
-            ],
-    )
-    return response.content[0].text
-
-
+# defining the content checks & examples
 content_checks = {
     "Safety_1": "Violence",
     "Safety_2": "Explicit Content",
@@ -75,7 +40,28 @@ content_check_examples = {
 
 }
 
-def evaluate_image_for_content_with_examples(base64_string, content_check, examples, client, MODEL_NAME):
+# Anthropic Functions
+def get_vision_completion(base64_string, prompt_text, MODEL_NAME):
+    '''
+    This function takes a base64 encoded image and a prompt text, and returns the completion from the Claude model.
+    '''
+    response = anthropic_client.messages.create(
+        model=MODEL_NAME,
+        max_tokens=2048,
+        temperature=0,
+        messages=[
+                {
+                    "role": 'user',
+                    "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": base64_string}},
+                        {"type": "text", "text": prompt_text}
+                    ]
+                }
+            ],
+    )
+    return response.content[0].text
+
+def evaluate_image_for_content_with_examples(base64_string, content_check, examples, MODEL_NAME):
     # Constructing the examples section of the prompt
     examples_text = "\n\n".join([f"Example of {category}:\n- {example}" for category, example in content_check_examples.items()])
     
@@ -100,3 +86,16 @@ def evaluate_image_for_content_with_examples(base64_string, content_check, examp
     )
     
     return response.content[0].text
+
+# utility function to process the image and get the content
+def process_image(image_path):
+    with Image.open(image_path) as img:
+        # Convert to RGB mode (removes alpha channel if present)
+        img = img.convert('RGB')
+        
+        # Save as JPEG in memory
+        buffer = io.BytesIO()
+        img.save(buffer, format='JPEG')
+        img_content = buffer.getvalue()
+    
+    return img_content
